@@ -1,15 +1,15 @@
 #ifdef __WAND__
-target[name[midi_chunk_reader.o] type[object]]
+target[name[chunk_reader.o] type[object]]
 #endif
 
-#include "midi_chunk_reader.h"
-#include "midi_file_header.h"
+#include "chunk_reader.h"
+#include "file_header.h"
 #include <herbs/exceptionmissing/exceptionmissing.h>
 #include <herbs/streamin/streamin.h>
 #include <herbs/cpuinfo/cpuinfo.h>
-#include <cstring> 
+#include <cstring>
 
-MuStudio::MIDI::ChunkReader::ChunkReader(Herbs::StreamIn& source
+MIDISeq::ChunkReader::ChunkReader(Herbs::StreamIn& source
 	,FileHeader& header):
 	m_source(source)
 	{
@@ -27,7 +27,7 @@ MuStudio::MIDI::ChunkReader::ChunkReader(Herbs::StreamIn& source
 	auto n_read=m_source.read(&size_header,sizeof(size_header));
 	if(!Herbs::CPUInfo::bigEndianIs())
 		{size_header=__builtin_bswap32(size_header);}
-		
+
 	if(strncmp(buffer_magic,"MThd",4) || size_header!=6
 		|| n_read!=sizeof(size_header))
 		{
@@ -48,12 +48,12 @@ MuStudio::MIDI::ChunkReader::ChunkReader(Herbs::StreamIn& source
 		}
 	}
 
-MuStudio::MIDI::ChunkReader::~ChunkReader()
+MIDISeq::ChunkReader::~ChunkReader()
 	{
 	m_source.modeBufferedOff();
 	}
 
-bool MuStudio::MIDI::ChunkReader::headerRead(Herbs::Stringbase<char>& name)
+bool MIDISeq::ChunkReader::headerRead(Herbs::Stringbase<char>& name)
 	{
 	name.clear();
 	unsigned int k=0;
@@ -64,28 +64,28 @@ bool MuStudio::MIDI::ChunkReader::headerRead(Herbs::Stringbase<char>& name)
 		}
 	if(k!=4)
 		{return 0;}
-		
+
 	uint32_t size_chunk_tmp;
 	auto n_read=m_source.read(&size_chunk_tmp,sizeof(size_chunk_tmp));
 	if(n_read!=sizeof(size_chunk_tmp))
 		{return 0;}
-	
+
 	if(Herbs::CPUInfo::bigEndianIs())
 		{size_chunk=size_chunk_tmp;}
 	else
 		{size_chunk=__builtin_bswap32(size_chunk_tmp);}
-		
-	return 1;		
+
+	return 1;
 	}
 
-size_t MuStudio::MIDI::ChunkReader::dataRead(void* buffer,size_t buffer_size)
+size_t MIDISeq::ChunkReader::dataRead(void* buffer,size_t buffer_size)
 	{
 	auto n_read=m_source.read(buffer,std::min(buffer_size,size_chunk));
 	size_chunk-=n_read;
 	return n_read;
 	}
 
-bool MuStudio::MIDI::ChunkReader::skip()
+bool MIDISeq::ChunkReader::skip()
 	{
 	if(size_chunk==0)
 		{return 0;}
@@ -101,7 +101,7 @@ bool MuStudio::MIDI::ChunkReader::skip()
 	return 1;
 	}
 
-bool MuStudio::MIDI::ChunkReader::skip(size_t n_bytes)
+bool MIDISeq::ChunkReader::skip(size_t n_bytes)
 	{
 	if(size_chunk==0)
 		{return 0;}
@@ -119,14 +119,14 @@ bool MuStudio::MIDI::ChunkReader::skip(size_t n_bytes)
 	return 1;
 	}
 
-uint8_t MuStudio::MIDI::ChunkReader::byteGet()
+uint8_t MIDISeq::ChunkReader::byteGet()
 	{
 	uint8_t ret=m_source.byteGet();
 	--size_chunk;
 	return ret;
 	}
 
-size_t MuStudio::MIDI::ChunkReader::varfieldGet()
+size_t MIDISeq::ChunkReader::varfieldGet()
 	{
 	size_t ret=0;
 	while(!m_source.eof() && !eoc())
