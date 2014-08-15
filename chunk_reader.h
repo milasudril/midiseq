@@ -6,20 +6,22 @@ dependency[chunk_reader.o]
 #ifndef MIDISEQ_CHUNKREADER_H
 #define MIDISEQ_CHUNKREADER_H
 
-#include <chunkio/reader.h>
 #include <cstdint>
 #include <cstddef>
 
 namespace Herbs
 	{
 	class StreamIn;
+	
+	template<class T>
+	class Stringbase;
 	}
 
 namespace MIDISeq
 	{
 	class FileHeader;
 
-	class ChunkReader:public ChunkIO::Reader
+	class ChunkReader
 		{
 		public:
 			explicit ChunkReader(Herbs::StreamIn& source,FileHeader& header);
