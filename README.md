@@ -6,5 +6,3 @@ midiseq
 Dependencies
 ------------
 * gabi
-* chunkio
-
