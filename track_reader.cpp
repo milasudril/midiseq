@@ -21,73 +21,79 @@ bool MIDISeq::TrackReader::eventNextGet(Event& event)
 	if(m_reader.eoc())
 		{return 0;}
 
-	uint8_t eventType=m_reader.byteGet();
+	event.data[0]=m_reader.byteGet();
+	
 	if(m_reader.eoc())
 		{return 0;}
 
-	switch(eventType)
+	switch(event.data[0])
 		{
 		case 0xff:
 			{
-			event.type=m_reader.byteGet();
+			event.data[1]=m_reader.byteGet();
 			if(m_reader.eoc())
 				{return 0;}
+			
 			size_t length=m_reader.varfieldGet();
 			if(length==0)
-				{break;}
+				{return 1;}
 			if(m_reader.eoc())
 				{return 0;}
-
-			auto n=std::min(length,sizeof(event.data));
-			auto n_read=m_reader.dataRead(&event.data,n);
+			auto n=std::min(length,sizeof(event.data)-2);
+			auto n_read=m_reader.dataRead(event.data+2,n);
 			if(n_read!=n)
 				{return 0;}
 			length-=n_read;
-
 			if(!m_reader.skip(length))
 				{return 0;}
-
-			if(event.type==0x51)
-				{event.data.dwords[0]=__builtin_bswap32(event.data.dwords[0])>>8;}
+			event.size=n_read;
+			return 1;
 			}
-			break;
+	
 		case 0xf7:
 		case 0xf0:
 			{
 			size_t length=m_reader.varfieldGet();
-			if(length!=0 && m_reader.eoc())
+			if(length==0)
+				{return 1;}
+			if(m_reader.eoc())
 				{return 0;}
+			auto n=std::min(length,sizeof(event.data)-1);
+			auto n_read=m_reader.dataRead(event.data+1,n);
+			if(n_read!=n)
+				{return 0;}
+			length-=n_read;
 			if(!m_reader.skip(length))
 				{return 0;}
-			printf("Sysex message skipped\n");
+			event.size=n_read;
+			return 1;
 			}
-			break;
+			
 		default:
-			event.type=(uint64_t)-1;
-
-			if(eventType&0x80)
+		//	We got a new status message
+			if(event.data[0]&0x80)
 				{
-				event.data.bytes[0]=eventType;
 				if(m_reader.eoc())
 					{return 0;}
-				event.data.bytes[1]=m_reader.byteGet();
+				event.data[1]=m_reader.byteGet();
 				}
-			else
+			else //We did not. This is running status.
 				{
-				//Running mode
-				event.data.bytes[0]=status_prev;
-				event.data.bytes[1]=eventType;
+			//	Duplicate the old status, and take the current "status" byte
+			//	as the first data byte.
+				event.data[1]=event.data[0];
+				event.data[0]=status_prev;
 				}
 
-			if((event.data.bytes[0]&0xf0)!=0xc0
-				&& (event.data.bytes[0]&0xf0)!=0xd0)
+		//	Not all MIDI status messages are 3 bytes. Some are only two
+			if((event.data[0]&0xf0)!=0xc0 && (event.data[0]&0xf0)!=0xd0)
 				{
-				event.data.bytes[2]=m_reader.byteGet();
+				event.data[2]=m_reader.byteGet();
 				if(m_reader.eoc())
 					{return 0;}
 				}
 
-			status_prev=event.data.bytes[0];
+			status_prev=event.data[0];
 			break;
 		}
 	return 1;

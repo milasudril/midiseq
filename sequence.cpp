@@ -7,6 +7,10 @@ target[name[sequence.o] type[object]]
 #include "file_header.h"
 #include "track_reader.h"
 #include "chunk_reader.h"
+
+#include "chunk_writer.h"
+#include "track_writer.h"
+
 #include <herbs/stringbase/stringbase.h>
 
 MIDISeq::Sequence::Sequence(){}
@@ -35,6 +39,31 @@ void MIDISeq::Sequence::load(Herbs::StreamIn& source)
 		chunk_reader.skip();
 		}
 	}
+	
+void MIDISeq::Sequence::store(Herbs::FileOut& dest)
+	{
+	MIDISeq::FileHeader header;
+	header.n_tracks=tracks.length();
+	header.time_division=time_division;
+	header.format=1;
+	
+	MIDISeq::ChunkWriter writer(dest,header);
+	auto ptr=tracks.begin();
+	while(ptr!=tracks.end())
+		{
+		writer.headerWrite(Herbs::Stringbase<char>("MTrk"));
+		MIDISeq::TrackWriter track_writer(writer);
+		auto event_current=ptr->begin();
+		while(event_current!=ptr->end())
+			{
+			track_writer.eventWrite(*event_current);
+			++event_current;
+			}
+		writer.chunkEnd();
+		++ptr;
+		}
+	}
+	
 
 namespace
 	{

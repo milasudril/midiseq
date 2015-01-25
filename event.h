@@ -10,17 +10,11 @@ target[name[event.h] type[include]]
 
 namespace MIDISeq
 	{
-	struct alignas(32) Event
+	struct Event
 		{
-		uint64_t time; /**<This time is absolute when event is read from SMF*/
-		uint64_t type;
-		union
-			{
-			uint8_t  bytes[16];
-			uint16_t words[8];
-			uint32_t dwords[4];
-			uint64_t qwords[2];
-			} data;
+		uint64_t time; /**<This time is absolute*/
+		uint8_t size;
+		uint8_t data[23];
 		};
 	}
 
